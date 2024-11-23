@@ -127,5 +127,10 @@ def camera_page():
     return flask.render_template('index.html')
 
 
+# in order to test cross core
+@app.route('/test')
+def test():
+    return "this is test"
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8081, debug=True)

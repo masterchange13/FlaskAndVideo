@@ -22,7 +22,7 @@ import cv2
 # video = cv2.VideoCapture(0)
 
 # 假设 'video' 是一个已经打开的摄像头
-video = cv2.VideoCapture(0)
+video = cv2.VideoCapture('/dev/video0')
 
 
 def set_image():
@@ -58,5 +58,6 @@ def test():
     print("dddd")
 
 if __name__ == '__main__':
-    generate_frames()
+    # generate_frames()
     # test()
+    set_image()

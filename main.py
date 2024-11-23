@@ -23,8 +23,8 @@ from PIL import Image
 import io
 
 # 打开摄像头（0 表示默认摄像头）
-camera = cv2.VideoCapture(0)
-print(camera)
+# camera = cv2.VideoCapture('/dev/video0')
+# print(camera)
 
 app = Flask(__name__)
 
@@ -32,7 +32,7 @@ app = Flask(__name__)
 # 根路由
 @app.route("/")
 def hello():
-    return "Hello, Flask!"
+    return flask.render_template("home.html")
 
 
 # 获取带参数的路由
@@ -82,6 +82,7 @@ def get_video2():
 
 
 def generate_frames():
+    camera = cv2.VideoCapture('/dev/video0')
     print("开始视频流...")
     while True:
         try:
@@ -127,4 +128,4 @@ def camera_page():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=8081, debug=True)

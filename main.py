@@ -21,6 +21,7 @@ from flask import Flask, jsonify, request, send_file, Response
 import cv2
 from PIL import Image
 import io
+import os
 
 # 打开摄像头（0 表示默认摄像头）
 # camera = cv2.VideoCapture('/dev/video0')
@@ -131,6 +132,42 @@ def camera_page():
 @app.route('/test')
 def test():
     return "this is test"
+
+
+# file transfer
+# 设置文件上传的目录
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保目录存在
+
+# 允许上传的文件类型
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'txt'}  # 可以根据需求添加其他类型
+
+# 检查文件扩展名
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'file' not in request.files:  # 检查请求中是否有文件
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']  # 获取文件
+
+    if file.filename == '':  # 检查文件名是否为空
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):  # 检查文件是否允许上传
+        filename = file.filename
+
+        # 检查文件是否已存在
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(filepath):
+            return jsonify({'error': 'File already exists'}), 400
+
+        file.save(filepath)  # 保存文件到指定目录
+        return jsonify({'message': 'File uploaded successfully', 'filename': filename}), 200
+
+    return jsonify({'error': 'File type not allowed'}), 400
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8081, debug=True)

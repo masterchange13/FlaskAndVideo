@@ -23,11 +23,42 @@ from PIL import Image
 import io
 import os
 
+# token
+from auth_token import *
+
 # 打开摄像头（0 表示默认摄像头）
 # camera = cv2.VideoCapture('/dev/video0')
 # print(camera)
 
 app = Flask(__name__)
+
+# 全局请求钩子
+@app.before_request
+def before_request():
+    # 排除不需要 Token 验证的路由
+    if request.endpoint in ['login', 'video_feed']:
+        return  # 跳过这些路由的验证
+
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'Token missing'}), 401
+
+    if not auth_header.startswith("Bearer "):
+        print(f"Invalid auth header format: {auth_header}")  # 记录日志
+        return jsonify({'error': 'Token invalid format, should start with "Bearer "'}), 401
+
+    # 提取 Token
+    token_parts = auth_header.split(" ")
+    if len(token_parts) != 2:
+        return jsonify({'error': 'Token invalid format'}), 401
+
+    token = token_parts[1]
+
+    # 验证 Token
+    result = verify_token(token)
+    if 'error' in result:
+        print(f"Token verification failed: {result['error']}")  # 记录日志
+        return jsonify(result), 401
 
 
 # 根路由
@@ -35,6 +66,35 @@ app = Flask(__name__)
 def hello():
     return flask.render_template("home.html")
 
+# 登录路由
+@app.route("/login", methods=['POST'])
+def login():
+    # 从 JSON 数据中提取参数
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    # 检查用户名和密码
+    if username == 'zyq' and password == '030701':
+        # 如果登录成功，生成 JWT Token
+        token = generate_token(username)
+        return jsonify(success=True, token=token), 200
+    else:
+        return jsonify(success=False, message="Invalid username or password"), 400
+
+# 受保护路由
+@app.route('/protected', methods=['GET'])
+def protected():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({'error': 'Token missing or invalid format'}), 401
+    token = auth_header.split(" ")[1]
+
+    # 验证 Token
+    result = verify_token(token)
+    if not result['success']:
+        return jsonify(result), 401
+    return jsonify({'message': 'Access granted', 'data': result['data']})
 
 # 获取带参数的路由
 @app.route("/items/<int:item_id>", methods=["GET"])

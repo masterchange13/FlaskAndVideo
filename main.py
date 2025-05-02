@@ -36,7 +36,7 @@ app = Flask(__name__)
 @app.before_request
 def before_request():
     # 排除不需要 Token 验证的路由
-    if request.endpoint in ['login', 'video_feed']:
+    if request.endpoint in ['login', 'video_feed', 'open_pin', 'test']:
         return  # 跳过这些路由的验证
 
     auth_header = request.headers.get('Authorization')
@@ -228,6 +228,57 @@ def upload():
         return jsonify({'message': 'File uploaded successfully', 'filename': filename}), 200
 
     return jsonify({'error': 'File type not allowed'}), 400
+
+@app.route("/getAllFile", methods=['POST'])
+def getAllFile():
+    files = os.listdir("/uploads")
+    # return files
+    return files
+
+import time
+import threading
+# 尝试导入 RPi.GPIO，如果失败就使用模拟类
+try:
+    import RPi.GPIO as GPIO
+    is_rpi = True
+except ImportError:
+    is_rpi = False
+    print("⚠️ 未在树莓派上运行，启用 GPIO 模拟模式")
+
+    class GPIO:
+        BCM = OUT = HIGH = LOW = None
+        @staticmethod
+        def setmode(mode): print("GPIO.setmode")
+        @staticmethod
+        def setup(pin, mode): print(f"GPIO.setup(pin={pin}, mode={mode})")
+        @staticmethod
+        def output(pin, state): print(f"GPIO.output(pin={pin}, state={state})")
+        @staticmethod
+        def cleanup(): print("GPIO.cleanup()")
+
+
+PIN = 17  # 树莓派上的 GPIO17 (引脚 11)
+
+# 初始化 GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(PIN, GPIO.OUT)
+
+def blink_pin():
+    GPIO.output(PIN, GPIO.HIGH)
+    print("🔆 PIN 已设置为高电平（打开）")
+    time.sleep(10)
+    GPIO.output(PIN, GPIO.LOW)
+    print("🌑 PIN 已设置为低电平（关闭）")
+
+@app.route('/open_pin', methods=['GET'])
+def open_pin():
+    threading.Thread(target=blink_pin).start()
+    return "✅ 已请求打开 GPIO 10 秒"
+
+@app.route('/cleanup', methods=['GET'])
+def cleanup():
+    GPIO.cleanup()
+    return "✅ GPIO 已清理"
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8081, debug=True)
